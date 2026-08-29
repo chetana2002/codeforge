@@ -12,6 +12,7 @@ from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
 from app.core.metrics_middleware import MetricsMiddleware
 from app.core.platform import ensure_windows_selector_event_loop
+from app.core.security_headers_middleware import SecurityHeadersMiddleware
 from app.schemas.envelope import ApiError, ErrorDetail
 
 ensure_windows_selector_event_loop()
@@ -43,6 +44,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(MetricsMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 @app.exception_handler(ApiError)

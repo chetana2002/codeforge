@@ -41,7 +41,24 @@ observability, and security — not a toy CRUD app.
 The API never executes user code directly. It submits execution jobs onto a Redis
 Stream; a separate worker process consumes jobs and runs untrusted code inside
 locked-down, ephemeral Docker containers. See [docs/architecture.md](docs/architecture.md)
-(added in Phase 18) for the full write-up.
+for the full write-up.
+
+## Documentation
+
+| Doc | Covers |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | System diagram, request paths, why not microservices |
+| [docs/hld.md](docs/hld.md) | Component responsibilities, core flows, design principles |
+| [docs/lld.md](docs/lld.md) | Request-level detail: SSE mechanics, file-tree algorithms, frontend cache architecture |
+| [docs/database-design.md](docs/database-design.md) | Schema, indexes, cascade strategy, migrations |
+| [docs/execution-engine.md](docs/execution-engine.md) | State machine, queue delivery semantics, sandbox internals |
+| [docs/security.md](docs/security.md) | Auth, authorization, path-traversal prevention, headers, secrets, known limitations |
+| [docs/failure-scenarios.md](docs/failure-scenarios.md) | What happens when Postgres/Redis/the worker goes down |
+| [docs/scalability.md](docs/scalability.md) | What scales as-is, what becomes the bottleneck, what would need building |
+| [docs/observability.md](docs/observability.md) | Health checks, every metric and where it's recorded, dashboards, logging |
+| [docs/deployment.md](docs/deployment.md) | Local dev, why migrations aren't automatic, whether this runs on Vercel |
+| [docs/tradeoffs.md](docs/tradeoffs.md) | Every major architectural choice, argued against its real alternative |
+| [docs/api.md](docs/api.md) | Response envelope, auth, idempotency, rate limits, endpoint reference |
 
 ## Tech stack
 
@@ -176,7 +193,7 @@ Tracking progress against the phased implementation plan.
 - [x] **Phase 15** — Audit logging: `audit_logs` table (no FK on `resource_id` by design — the referenced row can be legitimately gone, e.g. `PROJECT_DELETED`), all 9 event types (login/logout, project/file created/deleted, execution started/completed/cancelled) recorded atomically alongside the action they document, `GET /audit-logs` (paginated, scoped to the requesting user) — verified via 5 new backend tests and live against the real stack, including the worker-side execution_started/execution_completed events
 - [x] **Phase 16** — Testing: Playwright E2E covering the full golden path (register → create project → create file → write code → run → see live output → check history) against the real docker-compose stack — hit and fixed a real Monaco/Playwright quirk (`keyboard.type()`'s per-keystroke input fights Monaco's auto-closing brackets/quotes and corrupts the code; fixed with `insertText`); Vitest unit tests for `error-messages.ts` and `api-client.ts` (9 tests) — on top of the existing 99 backend + 13 worker tests
 - [x] **Phase 17** — CI: backend (Postgres+Redis services, ruff/black/mypy/pytest), worker (ruff/black/mypy/pytest against real sandbox containers), frontend (lint/typegen/type-check/vitest/build), Docker image builds, and a full end-to-end job that brings up the real docker-compose stack and runs the Playwright golden path — verified on a real GitHub Actions run (not just written): [github.com/chetana2002/codeforge](https://github.com/chetana2002/codeforge), all 5 jobs green after fixing 2 real CI-only failures (Next.js route types not generated on a fresh checkout; worker's sandbox test images not pre-pulled)
-- [ ] Phase 18 — Documentation
+- [x] **Phase 18** — Documentation: all 12 docs written (architecture, HLD, LLD, database design, execution engine, security, failure scenarios, scalability, observability, deployment, tradeoffs, API reference) — plus a real gap the writing surfaced and fixed along the way: security-response headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, environment-gated HSTS) were an explicit spec requirement that had never actually been implemented; added `SecurityHeadersMiddleware`, tested, and verified live
 - [ ] Phase 19 — Production hardening
 
 ## Security
@@ -186,7 +203,7 @@ CPU/memory/PID limits, non-root, read-only base filesystem where practical,
 automatic cleanup). This sandbox model is designed for **local/demo use** and
 would need additional hardening (e.g. gVisor/Firecracker-level isolation, network
 policy enforcement, syscall filtering) before handling hostile multi-tenant
-workloads at scale. See `docs/security.md` (Phase 18) for the full model.
+workloads at scale. See [docs/security.md](docs/security.md) for the full model.
 
 ## License
 

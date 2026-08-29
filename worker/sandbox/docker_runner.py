@@ -1,6 +1,6 @@
 """Runs one execution inside a locked-down, ephemeral Docker container.
 
-Security model (see docs/security.md, added in Phase 18): no network access,
+Security model (see docs/security.md and docs/execution-engine.md): no network access,
 CPU/memory/PID limits, non-root user, read-only root filesystem with a small
 tmpfs scratch dir for the working directory, no extra Linux capabilities, and
 automatic container removal after every run — success, failure, or timeout.
