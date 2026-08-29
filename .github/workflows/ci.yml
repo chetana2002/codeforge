@@ -94,7 +94,14 @@ jobs:
         run: mypy .
 
       # test_sandbox.py runs real containers via the Docker socket, which
-      # ubuntu-latest provides out of the box — no extra service needed.
+      # ubuntu-latest provides out of the box — no extra service needed, but
+      # the runtime images it launches (see worker/runtimes/) aren't present
+      # on a fresh runner and must be pulled explicitly first.
+      - name: Pre-pull sandbox images
+        run: |
+          docker pull python:3.12-slim
+          docker pull node:22-alpine
+
       - name: Pytest
         run: pytest -v
 
@@ -119,6 +126,13 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      # tsc alone can't see LayoutProps/PageProps — those are generated into
+      # .next/types by Next.js itself (normally as a side effect of `next dev`
+      # or `next build`), and a fresh checkout has no .next/ directory yet.
+      # `next typegen` produces just that, without a full build.
+      - name: Generate route types
+        run: npx next typegen
 
       - name: Type-check
         run: npx tsc --noEmit
