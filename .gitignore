@@ -1,0 +1,58 @@
+# --- Python / backend & worker ---
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+dist/
+build/
+
+# --- Node / frontend ---
+node_modules/
+.next/
+out/
+.turbo/
+next-env.d.ts
+*.tsbuildinfo
+coverage/
+playwright-report/
+test-results/
+
+# --- Env / secrets ---
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# --- Docker / data ---
+*.log
+.docker/
+pgdata/
+redisdata/
+grafanadata/
+
+# --- prometheus_client multiprocess mode mmap files ---
+# Shouldn't exist at all (PROMETHEUS_MULTIPROC_DIR is deliberately unset —
+# see .env.example), but ignored defensively in case it's ever misconfigured.
+counter_*.db
+gauge_*.db
+histogram_*.db
+summary_*.db
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

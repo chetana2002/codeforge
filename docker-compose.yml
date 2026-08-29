@@ -1,0 +1,141 @@
+name: codeforge
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-codeforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-codeforge_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-codeforge}
+    ports:
+      - "${POSTGRES_PORT_HOST:-5435}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-codeforge}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - codeforge-net
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT_HOST:-6381}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - codeforge-net
+
+  api:
+    build:
+      context: ./backend
+      target: dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-codeforge}:${POSTGRES_PASSWORD:-codeforge_dev_password}@postgres:5432/${POSTGRES_DB:-codeforge}
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "${API_PORT_HOST:-8001}:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - codeforge-net
+
+  worker:
+    build:
+      context: ./worker
+      target: dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-codeforge}:${POSTGRES_PASSWORD:-codeforge_dev_password}@postgres:5432/${POSTGRES_DB:-codeforge}
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./worker:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - codeforge-net
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8001}
+    ports:
+      - "${FRONTEND_PORT_HOST:-3002}:3000"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_next_cache:/app/.next
+    depends_on:
+      - api
+    networks:
+      - codeforge-net
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    restart: unless-stopped
+    volumes:
+      - ./infra/prometheus:/etc/prometheus
+      - prometheusdata:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    ports:
+      - "${PROMETHEUS_PORT_HOST:-9091}:9090"
+    networks:
+      - codeforge-net
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning
+      - grafanadata:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT_HOST:-3003}:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - codeforge-net
+
+networks:
+  codeforge-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:
+  prometheusdata:
+  grafanadata:
+  frontend_node_modules:
+  frontend_next_cache:

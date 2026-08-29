@@ -1,0 +1,192 @@
+{
+  "title": "CodeForge Overview",
+  "uid": "codeforge-overview",
+  "editable": true,
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP request rate by route",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total[1m])) by (path)",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "HTTP request duration (p95) by route",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, path))",
+          "legendFormat": "{{path}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "HTTP responses by status code",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total[1m])) by (status)",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Rate limit rejections by scope",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "sum(rate(rate_limit_rejections_total[5m])) by (scope)",
+          "legendFormat": "{{scope}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Execution queue depth",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [{ "expr": "queue_depth", "refId": "A" }]
+    },
+    {
+      "id": 6,
+      "title": "Executions created (rate)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [{ "expr": "rate(execution_total[5m])", "refId": "A" }]
+    },
+    {
+      "id": 7,
+      "title": "Database connection errors",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [{ "expr": "increase(database_connection_errors_total[5m])", "refId": "A" }]
+    },
+    {
+      "id": 8,
+      "title": "Worker job failures",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [{ "expr": "increase(worker_job_failures_total[5m])", "refId": "A" }]
+    },
+    {
+      "id": 9,
+      "title": "Execution outcomes (success vs failure)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "rate(execution_success_total[1m])",
+          "legendFormat": "success",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(execution_failure_total[1m])",
+          "legendFormat": "failure",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Execution duration (p50 / p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(execution_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(execution_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Worker throughput (jobs picked up)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 30 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "rate(worker_jobs_total[1m])",
+          "legendFormat": "jobs picked up",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(worker_job_failures_total[1m])",
+          "legendFormat": "unexpected failures",
+          "refId": "B"
+        }
+      ]
+    }
+  ]
+}
