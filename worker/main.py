@@ -38,9 +38,7 @@ async def main() -> None:
         consumer=settings.consumer_name,
     )
 
-    # start_http_server runs its own background thread, independent of this
-    # process's asyncio loop, so it doesn't need to be awaited or shut down
-    # explicitly — it dies with the process.
+    # Runs in its own background thread; no shutdown needed, it dies with the process.
     start_http_server(METRICS_PORT)
     logger.info("metrics_server_started", port=METRICS_PORT)
 

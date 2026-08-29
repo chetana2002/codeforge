@@ -1,12 +1,6 @@
 """Turns one execution-stream event into a finished Execution row.
 
-Idempotency: before doing any work, the current status is re-read from
-Postgres and the job is skipped unless it is still QUEUED. Because Redis
-Streams delivery is at-least-once (see redis's streams docs and
-infrastructure/redis/streams.py on the API side), the same event can be
-delivered twice — after a crash-and-XCLAIM, for instance — and this check is
-what keeps a duplicate delivery from re-running or clobbering a job that
-another delivery (or another worker) already finished.
+Idempotent against redelivery: skips the job unless status is still QUEUED.
 """
 
 import asyncio
@@ -36,14 +30,8 @@ _STATUS_FROM_SANDBOX = {
     "timeout": ExecutionStatus.TIMEOUT,
 }
 
-# The API commits the execution row before publishing its job event (see
-# create_and_enqueue's comment on the backend), so this should never actually
-# race — but a consumer that's already blocked in XREADGROUP can be woken and
-# dequeue a message within single-digit milliseconds of XADD, which has been
-# observed (rarely) beating the same-instance, same-transaction commit's
-# visibility to a *different* connection's next query. A few short, cheap
-# retries absorb that residual jitter without meaningfully delaying the much
-# more common case where the row is already there.
+# Absorbs a rare visibility race between the API's commit and this worker's
+# read on a different connection.
 _NOT_FOUND_RETRY_DELAYS_SECONDS = (0.05, 0.1, 0.2)
 
 
@@ -67,9 +55,8 @@ class ExecutionManager:
             await self._mark_failed_precondition(execution_id, str(exc))
             return
 
-        # The sandbox run itself happens outside any DB transaction — it can take
-        # up to execution_timeout_seconds, and there is no reason to hold a
-        # connection open for the duration of a subprocess we don't control.
+        # Runs outside any DB transaction — no reason to hold a connection
+        # open for the duration of a subprocess we don't control.
         result = await asyncio.to_thread(self.sandbox.run, runtime, code)
         wall_ms = int((time.monotonic() - started) * 1000)
 

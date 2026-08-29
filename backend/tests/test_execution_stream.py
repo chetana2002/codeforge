@@ -59,8 +59,7 @@ async def _insert_execution(
 
 async def _next_data_event(lines: AsyncIterator[str]) -> dict[str, object]:
     """Pulls from a single shared aiter_lines() iterator — httpx raises
-    StreamConsumed if aiter_lines() is called more than once per response, so
-    every read against one stream in a test must go through the same iterator."""
+    StreamConsumed if it's called more than once per response."""
     async for line in lines:
         if line.startswith("data: "):
             return dict(json.loads(line[len("data: ") :]))
@@ -125,8 +124,7 @@ async def test_stream_closes_after_terminal_state(
         lines = response.aiter_lines()
         await _next_data_event(lines)
 
-        # A terminal execution should end the stream right after its one event —
-        # draining the rest must complete quickly, not hang for _SSE_MAX_STREAM_SECONDS.
+        # A terminal execution ends the stream right after its one event.
         async def drain() -> list[str]:
             return [line async for line in lines]
 
@@ -156,13 +154,9 @@ async def test_stream_pushes_live_update_via_pubsub(
             json.dumps({"execution_id": str(execution.id), "status": "running"}),
         )
 
-        # Drive to a terminal status so the server-side generator's own
-        # is_terminal() check ends the stream, instead of leaving it running
-        # for the rest of its poll window and relying on the client dropping
-        # the connection — request.is_disconnected() never fires under
-        # httpx's ASGI test transport (see stream_execution's docstring), so
-        # a generator left running past the end of this test would outlive
-        # the per-test event loop and leak an idle-in-transaction connection.
+        # Drive to terminal so the generator ends itself — the test transport
+        # never reports a client disconnect, so relying on that would leak
+        # a connection past this test's event loop.
         await asyncio.sleep(0.3)
         execution.status = ExecutionStatus.SUCCESS
         await db_session.commit()

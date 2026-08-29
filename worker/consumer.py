@@ -1,28 +1,9 @@
 """Redis Streams consumer for execution jobs.
 
-Delivery semantics (at-least-once): messages are read via a consumer group with
-XREADGROUP and only XACKed once handling completes normally. If this process
-crashes mid-job, the message stays in the group's Pending Entries List; a
-periodic XAUTOCLAIM sweep here reclaims anything idle for longer than
-CLAIM_IDLE_MS and redelivers it (to this consumer, or another worker's, if
-there were more than one). ExecutionManager.handle_event is idempotent against
-redelivery for jobs that never got past QUEUED — it re-checks the execution's
-status before doing anything and is a no-op if it's already RUNNING or
-terminal.
-
-A message is deliberately left un-ACKed (and so eligible for reclaim) when
-handle_event raises unexpectedly, so a transient crash gets a retry. A message
-IS ACKed once handle_event returns normally, even if the job itself ended in
-FAILED/TIMEOUT — those are deliberate terminal outcomes, not delivery
-failures, and re-processing them would be a no-op anyway (see above) but there
-is no reason to keep them in the PEL.
-
-Known gap: a job that crashes *after* being marked RUNNING but before reaching
-a terminal state has no further retry path — the state machine has no
-RUNNING -> QUEUED transition, so a reclaimed redelivery of it is skipped as
-"not queued" and it is left stuck RUNNING. Recovering those requires a
-separate reaper (a periodic sweep for executions RUNNING past their timeout)
-that is out of scope for this phase; see docs/failure-scenarios.md.
+At-least-once delivery via a consumer group: XACK only on successful
+handling, so an unhandled exception leaves a message for XAUTOCLAIM to
+reclaim and retry. See docs/execution-engine.md and docs/failure-scenarios.md
+for delivery semantics and the known RUNNING-crash gap.
 """
 
 import asyncio

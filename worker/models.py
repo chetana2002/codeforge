@@ -88,11 +88,7 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    # No ForeignKey here (unlike the real users.id FK in the backend's model):
-    # the worker's local Base metadata doesn't define a users table at all (see
-    # this module's docstring), so a FK referencing it would fail to resolve
-    # during flush — the same reason Execution.project_id/file_id/user_id
-    # above are plain UUID columns rather than ForeignKey-constrained ones.
+    # No FK: this module has no users table, like Execution's user_id above.
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     event_type: Mapped[AuditEventType] = mapped_column(
         SAEnum(

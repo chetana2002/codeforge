@@ -208,15 +208,8 @@ class ExecutionService:
                 )
             )
 
-        # Commit before publishing, not after: the worker reads with its own DB
-        # connection, and a merely-flushed row is only visible inside this
-        # transaction. A fast worker can (and, under real load, will) dequeue
-        # the job and query for the execution before an out-of-order commit
-        # lands, finding nothing. Publishing only after the row is durably
-        # committed means a failed publish can leave a QUEUED execution with no
-        # job behind it — safer than the reverse, since that failure is at
-        # least visible and retryable, whereas a race is silent and rare
-        # enough to pass casual testing.
+        # Commit before publishing: the worker reads with its own connection,
+        # so publishing first risks a dequeue racing an uncommitted row.
         await self.db.commit()
         await self.db.refresh(execution)
 

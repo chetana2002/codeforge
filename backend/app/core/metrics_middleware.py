@@ -1,13 +1,8 @@
 """Records http_requests_total / http_request_duration_seconds for every request.
 
-Implemented as a plain ASGI middleware rather than Starlette's
-BaseHTTPMiddleware: BaseHTTPMiddleware buffers through an internal memory
-stream that has known interactions with StreamingResponse (delayed
-first-byte flushing, and interference with a request's own disconnect
-detection) — exactly the two things the SSE execution-stream endpoint
-depends on. Wrapping `send` here instead passes every message straight
-through unmodified; the middleware only peeks at the status code on
-http.response.start, so it can't affect timing or streaming behavior.
+Plain ASGI middleware, not Starlette's BaseHTTPMiddleware — the latter
+buffers in a way that interferes with StreamingResponse, which the SSE
+execution-stream endpoint depends on.
 """
 
 import time
@@ -42,10 +37,8 @@ class MetricsMiddleware:
 
         await self.app(scope, receive, send_wrapper)
 
-        # Set once routing has resolved (i.e. after self.app returns) so this is the
-        # route's path *template* ("/executions/{execution_id}"), not the resolved
-        # path with a real id in it — using the resolved path would give every
-        # distinct execution/project/file its own metric series and grow unbounded.
+        # scope["route"] is the path template, not the resolved path with a
+        # real id — avoids unbounded label cardinality.
         route = scope.get("route")
         path = route.path if route is not None else scope["path"]
         status = status_holder.get("status", 500)

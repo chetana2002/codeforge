@@ -1,12 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-/**
- * The golden path this whole app exists to support: register, build a
- * project, run code, and see the result — both live and later in history.
- * Runs against a real docker-compose stack (real Postgres, real Redis, a
- * real Docker sandbox container), not mocks, so a pass here means the whole
- * pipeline actually works end to end.
- */
+/** Register, create a project, run code, and see the result — live and in history. */
 test("register, create project, run code, and see output and history", async ({ page }) => {
   const email = `e2e-${Date.now()}@codeforge.dev`;
   const password = "e2etestpassword123";
@@ -29,11 +23,8 @@ test("register, create project, run code, and see output and history", async ({ 
   await expect(page.getByText("main.py", { exact: true }).first()).toBeVisible();
 
   await page.locator(".monaco-editor").click();
-  // insertText (not keyboard.type): typing character-by-character triggers
-  // Monaco's auto-closing brackets/quotes, which fights the keystrokes for
-  // the closing quote/paren we're also typing and corrupts the result (e.g.
-  // `print("hello")` becomes `print("") hello")`). insertText inserts the
-  // whole string at once, like a paste, bypassing that per-keystroke logic.
+  // insertText, not keyboard.type — typing per-keystroke fights Monaco's
+  // auto-closing brackets/quotes and corrupts the result.
   await page.keyboard.insertText(['print("hello from e2e")', "print(2 + 2)"].join("\n"));
 
   await page.getByRole("button", { name: "Save" }).click();

@@ -13,12 +13,9 @@ from app.infrastructure.database.base import Base
 class AuditLog(Base):
     """An append-only record of security- and resource-relevant actions.
 
-    resource_type/resource_id identify what the event acted on (e.g.
-    resource_type="project", resource_id=<project.id>) without a real foreign
-    key: the referenced row can be deleted (a PROJECT_DELETED event is exactly
-    that case) while the audit record must still exist afterward, so an FK
-    with any ondelete behavior would either block the delete or destroy the
-    evidence of it.
+    resource_id has no real FK: the referenced row can be deleted (a
+    PROJECT_DELETED event is exactly that case) while the audit record must
+    still exist afterward.
     """
 
     __tablename__ = "audit_logs"

@@ -62,9 +62,7 @@ async def test_project_create_rate_limited_after_threshold(client: AsyncClient) 
 
 
 async def test_rate_limits_are_scoped_per_user(client: AsyncClient) -> None:
-    """A second user's requests aren't blocked by the first user's rate limit —
-    the execution/project-create limiters key on the authenticated user's id,
-    not shared global state."""
+    """Limits key on user id, not shared global state."""
     limit = get_settings().rate_limit_project_create_per_minute
     await client.post(
         "/auth/register",

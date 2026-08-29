@@ -1,23 +1,9 @@
 """Redis-backed fixed-window rate limiting.
 
-Each limiter increments a counter keyed by (scope, identifier, current window)
-and lets the request through until the configured limit is hit within that
-window, then raises a 429. Using INCR (atomic) rather than GET-then-SET means
-concurrent requests from the same identifier can't race past the limit.
-
-Fixed windows can let up to 2x the limit through across a window boundary
-(e.g. a burst just before :00 and another just after) — a sliding-window log
-would avoid that, but costs a Redis sorted-set per identifier instead of a
-single counter. That trade isn't worth it here: these limits exist to blunt
-brute-forcing and accidental client-side hot loops, not to enforce billing-
-grade quotas, so the fixed window's simplicity wins.
-
-If Redis itself is unreachable, limiters fail *open* (allow the request)
-rather than *closed*: a Redis outage should degrade the app to "unprotected
-against abuse," not "completely unusable," and the execution pipeline already
-fails loudly on Redis errors where that matters (see
-ExecutionService.create_and_enqueue) — rate limiting is a secondary defense,
-not a correctness dependency.
+Atomic INCR per (scope, identifier, window) — no GET-then-SET race. Fixed
+windows can let up to 2x the limit through at a window boundary, an accepted
+tradeoff for abuse-blunting rather than billing-grade quotas. Fails open on
+Redis errors — see docs/failure-scenarios.md.
 """
 
 from collections.abc import Awaitable, Callable

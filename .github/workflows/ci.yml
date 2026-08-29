@@ -13,12 +13,7 @@ jobs:
     defaults:
       run:
         working-directory: backend
-    # Ports match tests/conftest.py's hardcoded defaults exactly (5435 for
-    # Postgres, 6381 for Redis) rather than the usual 5432/6379 — those are
-    # the dev docker-compose's own remapped host ports (this repo assumes a
-    # host that may already have other Postgres/Redis instances on the
-    # standard ports), and conftest.py was written against them, so matching
-    # here means no env var overrides are needed to reuse it unchanged.
+    # Ports match tests/conftest.py's defaults (5435/6381, not 5432/6379).
     services:
       postgres:
         image: postgres:16
@@ -93,10 +88,7 @@ jobs:
       - name: Mypy
         run: mypy .
 
-      # test_sandbox.py runs real containers via the Docker socket, which
-      # ubuntu-latest provides out of the box — no extra service needed, but
-      # the runtime images it launches (see worker/runtimes/) aren't present
-      # on a fresh runner and must be pulled explicitly first.
+      # Runtime images aren't present on a fresh runner.
       - name: Pre-pull sandbox images
         run: |
           docker pull python:3.12-slim
@@ -120,17 +112,15 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
-      # `npm ci` is avoided here too — see the comment in frontend/Dockerfile.
+      # npm ci is avoided here too — see frontend/Dockerfile.
       - name: Install dependencies
         run: npm install
 
       - name: Lint
         run: npm run lint
 
-      # tsc alone can't see LayoutProps/PageProps — those are generated into
-      # .next/types by Next.js itself (normally as a side effect of `next dev`
-      # or `next build`), and a fresh checkout has no .next/ directory yet.
-      # `next typegen` produces just that, without a full build.
+      # tsc can't see LayoutProps/PageProps until Next.js generates
+      # .next/types, which a fresh checkout doesn't have yet.
       - name: Generate route types
         run: npx next typegen
 
@@ -169,10 +159,8 @@ jobs:
       - name: Configure environment
         run: cp .env.example .env
 
-      # Dev targets (not the production images built above): they bind-mount
-      # source and run with --reload, but more importantly this is the exact
-      # config the app is meant to run under for local development, which is
-      # what this suite is actually verifying end to end.
+      # Dev targets, not the production images built above — this is the
+      # config being verified end to end.
       - name: Start the stack
         run: docker compose up -d --build postgres redis api worker frontend
 
@@ -192,9 +180,6 @@ jobs:
       - name: Run database migrations
         run: docker compose exec -T api alembic upgrade head
 
-      # The sandbox images aren't in the worker's own image, so the first
-      # execution in the test would otherwise eat a slow on-demand pull mid
-      # test and risk timing out — pull them up front instead.
       - name: Pre-pull sandbox images
         run: |
           docker pull python:3.12-slim

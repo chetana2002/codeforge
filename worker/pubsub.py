@@ -1,12 +1,8 @@
 """Redis pub/sub notifications for execution status transitions.
 
-Separate from the job queue (codeforge:executions, a Redis Stream): this is a
-fire-and-forget broadcast so the API can push live status to a connected SSE
-client without polling Postgres. Pub/sub delivers at-most-once with no
-replay — a subscriber that isn't listening at publish time simply misses the
-message — which is fine here because the API always reads current state from
-Postgres directly (via ExecutionService.get_owned) around the subscription
-window, rather than treating a pub/sub message as the source of truth.
+Fire-and-forget broadcast, separate from the job queue — lets the API push
+live status to an SSE client without polling Postgres. At-most-once
+delivery is fine here since the API always re-reads state from Postgres.
 """
 
 import json

@@ -51,13 +51,9 @@ export function useExecution(executionId: string | undefined) {
   });
 }
 
-// Push-based complement to useExecution's polling: opens the backend's SSE
-// endpoint and writes each event straight into the same query cache entry, so
-// a running execution's status/output updates immediately instead of waiting
-// for the next 1s poll. Polling stays in place as the fallback for viewers
-// whose network path doesn't support a long-lived SSE connection (some
-// corporate proxies buffer or kill it), so this hook only ever narrows that
-// gap — it never disables the poll.
+// Push-based complement to useExecution's polling: writes SSE events into
+// the same query cache entry. Polling stays as a fallback for viewers whose
+// network path doesn't support long-lived SSE.
 export function useExecutionStream(executionId: string | undefined) {
   const queryClient = useQueryClient();
 
@@ -76,11 +72,7 @@ export function useExecutionStream(executionId: string | undefined) {
       }
     };
 
-    // EventSource retries on every non-2xx/network error by design, including
-    // after the backend's own max-duration cutoff closes the stream — so a
-    // still-running execution just reconnects and keeps getting updates.
-    // Nothing to do here beyond letting that happen; the effect's cleanup is
-    // what actually stops it once the execution is terminal or unmounted.
+    // EventSource auto-reconnects on error; nothing to do here.
     source.onerror = () => undefined;
 
     return () => source.close();

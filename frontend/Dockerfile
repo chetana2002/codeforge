@@ -3,10 +3,8 @@ WORKDIR /app
 
 FROM base AS deps
 COPY package.json package-lock.json ./
-# `npm ci` is deliberately avoided: npm 11's optional-dependency resolution for
-# eslint 9's flat-config toolchain (ajv/json-schema-traverse) produces a lockfile
-# that npm's own `ci` consistency check then rejects, even immediately after a
-# clean `npm install`. `npm install` against the checked-in lockfile is unaffected.
+# npm ci is avoided: npm 11 rejects this lockfile's own consistency check
+# under eslint 9's flat-config toolchain, even right after npm install.
 RUN npm install
 
 FROM base AS dev

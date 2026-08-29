@@ -45,8 +45,6 @@ async def execute_project_file(
     db: AsyncSession = Depends(get_db),
 ) -> Envelope[ExecutionResponse]:
     project = await ProjectService(db).get_owned(current_user.id, project_id)
-    # create_and_enqueue commits internally, before publishing to Redis — see its
-    # docstring/comment for why that ordering matters.
     execution = await ExecutionService(db).create_and_enqueue(
         project, current_user.id, payload.file_id, idempotency_key
     )
@@ -76,20 +74,10 @@ async def stream_execution(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
-    """Server-Sent Events stream of an execution's status: one event immediately
-    with the current state, then one more each time it changes, until it
-    reaches a terminal state or settings.execution_stream_max_seconds elapses.
+    """SSE stream of an execution's status until terminal or max duration elapses.
 
-    Ownership is checked here, outside the generator, so an unauthorized or
-    unknown execution_id gets a normal 404 JSON error instead of a 200 stream
-    that immediately errors.
-
-    The max-duration cutoff isn't just a safety net for a client that vanishes
-    mid-stream — request.is_disconnected() is unreliable enough (confirmed
-    against httpx's ASGI test transport, which never reports a disconnect for a
-    client that simply stops reading) that it can't be trusted alone to end an
-    abandoned generator, which would otherwise hold its DB session's
-    transaction open for as long as the stream keeps running.
+    Ownership is checked outside the generator so an unauthorized/unknown id
+    gets a plain 404 instead of a 200 stream that immediately errors.
     """
     settings = get_settings()
     service = ExecutionService(db)
@@ -127,11 +115,8 @@ async def stream_execution(
                 if data.get("execution_id") != str(execution_id):
                     continue
 
-                # db is a single long-lived session for the whole stream, so the
-                # execution row it already loaded sits in its identity map — a
-                # plain re-query would hand back that same stale object instead
-                # of the row another session just committed. Expire it first so
-                # get_owned() issues a real SELECT.
+                # Force a real SELECT — the identity map would otherwise hand
+                # back this session's stale copy of the row.
                 db.expire_all()
                 execution = await service.get_owned(current_user.id, execution_id)
                 yield _sse_event(execution)
@@ -140,10 +125,6 @@ async def stream_execution(
         finally:
             await pubsub.unsubscribe(EXECUTION_UPDATES_CHANNEL)
             await pubsub.aclose()  # type: ignore[no-untyped-call]  # redis-py stub gap
-            # Release the connection the moment the generator is done rather than
-            # waiting for get_db()'s own cleanup, which only runs once Starlette
-            # finishes flushing the whole StreamingResponse — a step that can lag
-            # well behind the generator's own completion.
             await db.close()
 
     return StreamingResponse(

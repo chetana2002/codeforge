@@ -16,16 +16,9 @@ Receive = Callable[[], Awaitable[Message]]
 Send = Callable[[Message], Awaitable[None]]
 
 _STATIC_HEADERS: list[tuple[bytes, bytes]] = [
-    # This API only ever serves JSON — nosniff stops a browser from
-    # second-guessing that and executing a response as script/HTML.
     (b"x-content-type-options", b"nosniff"),
-    # No response from this API is meant to be framed by another site.
     (b"x-frame-options", b"DENY"),
-    # Don't leak the full request URL (which can contain resource ids) to
-    # third-party origins a client might navigate to afterward.
     (b"referrer-policy", b"strict-origin-when-cross-origin"),
-    # This is a JSON API with no use for any browser feature here — deny
-    # them all rather than enumerate an allowlist that will drift.
     (b"permissions-policy", b"geolocation=(), camera=(), microphone=()"),
 ]
 
@@ -33,10 +26,7 @@ _STATIC_HEADERS: list[tuple[bytes, bytes]] = [
 class SecurityHeadersMiddleware:
     def __init__(self, app: Callable[[Scope, Receive, Send], Awaitable[None]]) -> None:
         self.app = app
-        # HSTS only makes sense once the app is actually served over HTTPS —
-        # asserting it in local HTTP dev would be a lie the browser ignores
-        # anyway, but there's no reason to emit a header that's meaningless
-        # for the environment it's answering in.
+        # HSTS only makes sense once actually served over HTTPS.
         self._is_production = get_settings().is_production
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
