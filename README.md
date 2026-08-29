@@ -138,6 +138,20 @@ cd backend
 alembic upgrade head
 ```
 
+### Seed data
+
+Optional — a fresh database is a perfectly empty, working app. To have
+something to look at immediately instead of registering by hand:
+
+```bash
+docker compose exec api python -m app.seed
+```
+
+Creates one demo account (`demo@codeforge.dev` / `demo-password-123`) with
+two projects (a Python Fibonacci example, a JavaScript prime-finder example),
+ready to run. Safe to re-run — it's a no-op if the demo account already
+exists.
+
 ### Running tests
 
 ```bash
@@ -194,7 +208,7 @@ Tracking progress against the phased implementation plan.
 - [x] **Phase 16** — Testing: Playwright E2E covering the full golden path (register → create project → create file → write code → run → see live output → check history) against the real docker-compose stack — hit and fixed a real Monaco/Playwright quirk (`keyboard.type()`'s per-keystroke input fights Monaco's auto-closing brackets/quotes and corrupts the code; fixed with `insertText`); Vitest unit tests for `error-messages.ts` and `api-client.ts` (9 tests) — on top of the existing 99 backend + 13 worker tests
 - [x] **Phase 17** — CI: backend (Postgres+Redis services, ruff/black/mypy/pytest), worker (ruff/black/mypy/pytest against real sandbox containers), frontend (lint/typegen/type-check/vitest/build), Docker image builds, and a full end-to-end job that brings up the real docker-compose stack and runs the Playwright golden path — verified on a real GitHub Actions run (not just written): [github.com/chetana2002/codeforge](https://github.com/chetana2002/codeforge), all 5 jobs green after fixing 2 real CI-only failures (Next.js route types not generated on a fresh checkout; worker's sandbox test images not pre-pulled)
 - [x] **Phase 18** — Documentation: all 12 docs written (architecture, HLD, LLD, database design, execution engine, security, failure scenarios, scalability, observability, deployment, tradeoffs, API reference) — plus a real gap the writing surfaced and fixed along the way: security-response headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, environment-gated HSTS) were an explicit spec requirement that had never actually been implemented; added `SecurityHeadersMiddleware`, tested, and verified live
-- [ ] Phase 19 — Production hardening
+- [x] **Phase 19** — Production hardening: seed data command (`python -m app.seed`, idempotent, verified live end-to-end including login and reading the seeded projects back through the real API), final sweep for TODOs/FIXMEs/hardcoded secrets (none found), CONTRIBUTING.md and LICENSE reviewed, full backend/worker/frontend verification (101 + 13 + 9 tests, ruff/black/mypy/eslint/tsc all clean) and CI all green on the final push
 
 ## Security
 
