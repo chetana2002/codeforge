@@ -34,7 +34,7 @@ import { getFriendlyErrorMessage } from "@/lib/error-messages";
 const createProjectSchema = z.object({
   name: z.string().min(1, "Name is required").max(200),
   description: z.string().max(2000).optional(),
-  language: z.enum(["python", "javascript"]),
+  language: z.enum(["python", "javascript", "c", "cpp", "java"]),
   visibility: z.enum(["private", "public"]),
 });
 
@@ -118,6 +118,9 @@ export function CreateProjectDialog() {
                       <SelectContent>
                         <SelectItem value="python">Python</SelectItem>
                         <SelectItem value="javascript">JavaScript</SelectItem>
+                        <SelectItem value="c">C</SelectItem>
+                        <SelectItem value="cpp">C++</SelectItem>
+                        <SelectItem value="java">Java</SelectItem>
                       </SelectContent>
                     </Select>
                   )}

@@ -33,6 +33,9 @@ import type { Project } from "@/types/api";
 const LANGUAGE_LABELS: Record<Project["language"], string> = {
   python: "Python",
   javascript: "JavaScript",
+  c: "C",
+  cpp: "C++",
+  java: "Java",
 };
 
 export function ProjectCard({ project }: { project: Project }) {

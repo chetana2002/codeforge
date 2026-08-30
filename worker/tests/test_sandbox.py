@@ -121,3 +121,91 @@ def test_container_is_removed_after_run(
     runner.run(_python_spec(), 'print("cleanup check")')
     after = {c.id for c in docker_client.containers.list(all=True)}
     assert after - before == set()
+
+
+def _c_spec(**overrides: object) -> RuntimeSpec:
+    defaults: dict[str, object] = {
+        "image": "gcc:13",
+        "filename": "main.c",
+        "command": ["sh", "-c", "gcc -O2 -o main main.c && ./main"],
+        "timeout_seconds": 30,
+        "memory_limit_mb": 128,
+        "cpu_limit": 0.5,
+        "pids_limit": 32,
+        "env": {"TMPDIR": "/sandbox"},
+    }
+    defaults.update(overrides)
+    return RuntimeSpec(**defaults)  # type: ignore[arg-type]
+
+
+def _cpp_spec(**overrides: object) -> RuntimeSpec:
+    defaults: dict[str, object] = {
+        "image": "gcc:13",
+        "filename": "main.cpp",
+        "command": ["sh", "-c", "g++ -O2 -o main main.cpp && ./main"],
+        "timeout_seconds": 30,
+        "memory_limit_mb": 128,
+        "cpu_limit": 0.5,
+        "pids_limit": 32,
+        "env": {"TMPDIR": "/sandbox"},
+    }
+    defaults.update(overrides)
+    return RuntimeSpec(**defaults)  # type: ignore[arg-type]
+
+
+def _java_spec(**overrides: object) -> RuntimeSpec:
+    defaults: dict[str, object] = {
+        "image": "eclipse-temurin:21-jdk-alpine",
+        "filename": "Main.java",
+        "command": ["sh", "-c", "javac Main.java && java -XX:-UsePerfData Main"],
+        "timeout_seconds": 30,
+        "memory_limit_mb": 256,
+        "cpu_limit": 0.5,
+        "pids_limit": 64,
+        "env": {"TMPDIR": "/sandbox"},
+    }
+    defaults.update(overrides)
+    return RuntimeSpec(**defaults)  # type: ignore[arg-type]
+
+
+@pytest.mark.timeout(60)
+def test_c_execution_captures_stdout(runner: DockerSandboxRunner) -> None:
+    code = '#include <stdio.h>\nint main(void) { printf("Hello from CodeForge!\\n"); return 0; }\n'
+    result = runner.run(_c_spec(), code)
+    assert result.status == "success"
+    assert result.exit_code == 0
+    assert "Hello from CodeForge!" in result.stdout
+
+
+@pytest.mark.timeout(60)
+def test_c_compile_error_captures_stderr(runner: DockerSandboxRunner) -> None:
+    result = runner.run(_c_spec(), "int main( { return 0; }\n")
+    assert result.status == "failed"
+    assert result.stderr
+
+
+@pytest.mark.timeout(60)
+def test_cpp_execution_captures_stdout(runner: DockerSandboxRunner) -> None:
+    code = (
+        "#include <iostream>\n"
+        'int main() { std::cout << "Hello from CodeForge!" << std::endl; return 0; }\n'
+    )
+    result = runner.run(_cpp_spec(), code)
+    assert result.status == "success"
+    assert result.exit_code == 0
+    assert "Hello from CodeForge!" in result.stdout
+
+
+@pytest.mark.timeout(60)
+def test_java_execution_captures_stdout(runner: DockerSandboxRunner) -> None:
+    code = (
+        "public class Main {\n"
+        "    public static void main(String[] args) {\n"
+        '        System.out.println("Hello from CodeForge!");\n'
+        "    }\n"
+        "}\n"
+    )
+    result = runner.run(_java_spec(), code)
+    assert result.status == "success"
+    assert result.exit_code == 0
+    assert "Hello from CodeForge!" in result.stdout

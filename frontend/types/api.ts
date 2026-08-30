@@ -23,7 +23,7 @@ export interface User {
   created_at: string;
 }
 
-export type Language = "python" | "javascript";
+export type Language = "python" | "javascript" | "c" | "cpp" | "java";
 export type ProjectVisibility = "private" | "public";
 
 export interface Project {

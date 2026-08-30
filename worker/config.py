@@ -1,5 +1,7 @@
+import socket
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,7 +23,9 @@ class WorkerSettings(BaseSettings):
     execution_pids_limit: int = 64
 
     consumer_group: str = "execution-workers"
-    consumer_name: str = "worker-1"
+    # Defaults to the container hostname so `docker compose up --scale worker=N`
+    # gives each replica a distinct Redis Streams consumer identity for free.
+    consumer_name: str = Field(default_factory=socket.gethostname)
     stream_key: str = "codeforge:executions"
 
 

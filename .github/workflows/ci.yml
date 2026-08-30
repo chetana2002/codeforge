@@ -93,6 +93,8 @@ jobs:
         run: |
           docker pull python:3.12-slim
           docker pull node:22-alpine
+          docker pull gcc:13
+          docker pull eclipse-temurin:21-jdk-alpine
 
       - name: Pytest
         run: pytest -v
@@ -184,6 +186,8 @@ jobs:
         run: |
           docker pull python:3.12-slim
           docker pull node:22-alpine
+          docker pull gcc:13
+          docker pull eclipse-temurin:21-jdk-alpine
 
       - uses: actions/setup-node@v4
         with:

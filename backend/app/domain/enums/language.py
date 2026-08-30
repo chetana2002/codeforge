@@ -7,3 +7,6 @@ class Language(str, enum.Enum):
 
     PYTHON = "python"
     JAVASCRIPT = "javascript"
+    C = "c"
+    CPP = "cpp"
+    JAVA = "java"
